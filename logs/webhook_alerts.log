@@ -1,0 +1,3 @@
+2025-01-04 17:18:50,091 - INFO - Serving on http://0.0.0.0:5000
+2025-01-04 17:18:58,548 - INFO - Received webhook alert - Ticker: TEST-NQ_short, Trade ID: Open_Short_ID_6, Numeric ID: 6, Data: {'ticker': 'TEST-NQ_short', 'action': 'sell', 'current_position': 'flat', 'qty': '1', 'price': '2246.5', 'new_pos': 'short', 'trade_id': 'Open_Short_ID_6', 'time': '2025-01-02T13:00:00Z'}
+2025-01-04 17:18:58,552 - INFO - Received webhook alert - Ticker: TEST-NQ_short, Trade ID: Close_Short_ID_7, Numeric ID: 7, Data: {'ticker': 'TEST-NQ_short', 'action': 'buy', 'current_position': 'short', 'qty': '1', 'price': '2246.5', 'new_pos': 'flat', 'trade_id': 'Close_Short_ID_7', 'time': '2025-01-02T13:00:00Z'}

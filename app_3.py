@@ -10,14 +10,64 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from collections import defaultdict
 import threading
+from waitress import serve
 import logging
+from redis import Redis  # Import Redis for Flask-Limiter storage
+import subprocess
+import logging
+from logging.handlers import RotatingFileHandler
 
-# Suppress HTTP access logs
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-
+# Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)  # Secure random key for session management
+
+# Initialize Redis for Flask-Limiter storage
+redis_connection = Redis(host='localhost', port=6379)  # Update host/port if Redis is running elsewhere
+
+# Initialize Flask-Limiter with Redis backend
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="redis://localhost:6379",  # Redis URI for persistent storage
+    default_limits=["200 per day", "50 per hour"],  # Default rate limits
+)
+
+# -----------------------------------------------------------------------------------
+# Custom Banner
+# -----------------------------------------------------------------------------------
+def cool_banner(debug_mode=False):
+    # Gradient colors for 0SPX
+    colors = [
+        "\033[38;2;0;255;255m",  # Cyan
+        "\033[38;2;128;0;255m",  # Purple
+        "\033[38;2;255;165;0m",  # Orange
+    ]
+    lime_green = "\033[38;2;50;205;50m"  # Lime green
+    reset = "\033[0m"  # Reset color
+
+    # Gradient text for "0SPX"
+    gradient_0spx = (
+        f"{colors[0]}0{colors[1]}S{colors[2]}P{colors[0]}X{reset}"  # Apply gradient
+    )
+
+    # Debug status
+    debug_status = "Debug Mode: Enabled 🔧" if debug_mode else "Debug Mode: Disabled ❌"
+
+    # Full banner with 0SPX in gradient
+    banner = f"""
+      /$$$$$$   /$$$$$$  /$$$$$$$  /$$   /$$      {gradient_0spx} Strategy Management Server 🚀
+     /$$$_  $$ /$$__  $$| $$__  $$| $$  / $$      Ready for Connections ✅
+    | $$$\\ $$| $$  \\__/| $$  \\ $$|  $$/ $$        Running on Local Ports 5000 📡
+    | $$ $$ $$|  $$$$$$ | $$$$$$$/ \\  $$$$/       {debug_status}
+    | $$\\ $$$$ \\____  $$| $$____/   >$$  $$       System's A Go! 🐱‍🏍
+    | $$ \\ $$$ /$$  \\ $$| $$       /$$/\\  $$      Author: emyeele 🛠️
+    |  $$$$$$/|  $$$$$$/| $$      | $$  \\ $$
+     \\______/  \\______/ |__/      |__/  |__/
+    
+    👂 {lime_green}Now listening for incoming webhooks...{reset}
+    """
+    print(banner)
+
 
 # -----------------------------------------------------------------------------------
 # Global Configuration and Data Structures
@@ -29,13 +79,6 @@ config = {"strategies": {}}
 if os.path.exists(config_path):
     with open(config_path, 'r') as f:
         config = json.load(f)
-
-# Initialize Flask-Limiter to apply rate limits
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["200 per day", "50 per hour"]  # Default rate limit for the app
-)
 
 # Dictionary to store pending alerts
 # Key: (ticker, numeric_id)
@@ -204,12 +247,31 @@ def send_data_to_nt8(port, payload):
         print(f"Failed to send data to port {port}: {e}")
 
 # -----------------------------------------------------------------------------------
+# Webhook Logging Configuration
+# -----------------------------------------------------------------------------------
+
+# Set up basic logging configuration
+logging.basicConfig(
+    filename='logs/webhook_alerts.log',  # Name of the log file
+    level=logging.INFO,  # Log level (INFO, DEBUG, ERROR, etc.)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format with timestamp
+)
+
+# Set up log rotation for the log file
+handler = RotatingFileHandler('logs/webhook_alerts.log', maxBytes=1000000, backupCount=3)
+handler.setLevel(logging.INFO)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(handler)
+
+# -----------------------------------------------------------------------------------
 # Webhook Route
 # -----------------------------------------------------------------------------------
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
     if not data:
+        logging.error("No data provided in the webhook request")  # Log errors if any
         return jsonify({'status': 'error', 'message': 'No data provided'}), 400
 
     ticker = data["ticker"]
@@ -221,6 +283,9 @@ def webhook():
         print("\n--- RECEIVED ALERT ---")
         # Log checks for duplicate detection
         print(f"Received alert: ticker={ticker}, trade_id={trade_id}, numeric_id={numeric_id}")
+
+        # Log the incoming webhook alert to webhook_alerts.log
+        logging.info(f"Received webhook alert - Ticker: {ticker}, Trade ID: {trade_id}, Numeric ID: {numeric_id}, Data: {data}")
 
         # Prevent duplicate enqueuing
         if (ticker, numeric_id) in discarded_numeric_ids:
@@ -247,6 +312,7 @@ def webhook():
         print(json.dumps(data, indent=4))
 
     return jsonify({'status': 'success', 'message': 'Alert queued'}), 200
+
 
 # -----------------------------------------------------------------------------------
 # Debugging Route
@@ -385,5 +451,62 @@ def ensure_strategy_data_integrity():
 # -----------------------------------------------------------------------------------
 threading.Thread(target=background_processor, daemon=True).start()
 
-if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+# -----------------------------------------------------------------------------------
+# Supress Flask Logs
+# -----------------------------------------------------------------------------------
+
+# Suppress Flask logs (if using werkzeug in fallback scenarios)
+log = logging.getLogger('werkzeug')
+log.handlers.clear()
+
+
+
+
+# -----------------------------------------------------------------------------------
+# Webhook Logging Configuration
+# -----------------------------------------------------------------------------------
+
+# Set up basic logging configuration
+logging.basicConfig(
+    filename='logs/webhook_alerts.log',  # Name of the log file
+    level=logging.INFO,  # Log level (INFO, DEBUG, ERROR, etc.)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format with timestamp
+)
+
+# Set up log rotation for the log file
+handler = RotatingFileHandler('logs/webhook_alerts.log', maxBytes=1000000, backupCount=3)
+handler.setLevel(logging.INFO)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(handler)
+
+
+# -----------------------------------------------------------------------------------
+# Start Redis and ngrok before Flask server
+# -----------------------------------------------------------------------------------
+# Function to run Redis server without showing logs
+def run_redis():
+    redis_path = './redis/redis-server.exe'  # Path to redis-server.exe inside the redis folder
+    subprocess.run([redis_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+# Function to run ngrok without showing logs
+def run_ngrok():
+    ngrok_path = './ngrok/ngrok.exe'  # Path to ngrok.exe inside the ngrok folder
+    ngrok_command = [ngrok_path, "http", "--domain=0spx.ngrok.io", "5000"]
+    subprocess.run(ngrok_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+# Main function to start everything
+def main():
+    # Start Redis and ngrok in separate threads
+    redis_thread = threading.Thread(target=run_redis)
+    ngrok_thread = threading.Thread(target=run_ngrok)
+    
+    redis_thread.start()
+    ngrok_thread.start()
+
+    # Run Flask server
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
+
+if __name__ == "__main__":
+    cool_banner(debug_mode=True)
+    main()

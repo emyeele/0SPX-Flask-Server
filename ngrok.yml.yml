@@ -1,5 +1,0 @@
-authtoken: 2jvNXFwJumVfmnCwwsC3B9aq3oV_6UVoM72pDmZRyPAhymjrb
-tunnels:
-  my_flask_app:
-    proto: http
-    addr: 5000
