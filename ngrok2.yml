@@ -1,0 +1,21 @@
+version: "2"
+authtoken: 2jvNXFwJumVfmnCwwsC3B9aq3oV_6UVoM72pDmZRyPAhymjrb
+tunnels:
+  lro_mes:
+    addr: 8081
+    proto: http
+  lro_mnq:
+    addr: 8082
+    proto: http
+  lro_m2k:
+    addr: 8083
+    proto: http
+  linreg_mes:
+    addr: 8084
+    proto: http
+  linreg_mnq:
+    addr: 8085
+    proto: http
+  linreg_m2k:
+    addr: 8086
+    proto: http

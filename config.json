@@ -1,0 +1,56 @@
+{
+    "strategies": {
+        "PO": {
+            "accounts": {},
+            "tickers": {
+                "MNQ_30minL": {
+                    "ports": [
+                        "9060"
+                    ]
+                },
+                "TEST-NQ_long": {
+                    "ports": [
+                        "9098"
+                    ]
+                },
+                "NQ_Long_5min": {
+                    "ports": [
+                        "9035",
+                        "9037"
+                    ]
+                },
+                "YM_long_5min": {
+                    "ports": [
+                        "9040"
+                    ]
+                }
+            }
+        },
+        "PO-short": {
+            "accounts": {},
+            "tickers": {
+                "MNQ_30minS": {
+                    "ports": [
+                        "9061"
+                    ]
+                },
+                "TEST-NQ_short": {
+                    "ports": [
+                        "9099"
+                    ]
+                },
+                "NQ_short_5min": {
+                    "ports": [
+                        "9032",
+                        "9038"
+                    ]
+                },
+                "YM_short_5min": {
+                    "ports": [
+                        "9041"
+                    ]
+                }
+            }
+        }
+    }
+}

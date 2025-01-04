@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategies Management</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Body and General Styles */
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        h2 {
+            color: #ffffff;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            background-color: #000000;
+        }
+
+        table, th, td {
+            border: 1px solid #444444 !important; /* Ensures consistent border color */
+            color: #ffffff;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        thead th {
+            border-bottom: 2px solid #888888; /* Thicker border for headers */
+            background-color: #1a1a1a; /* Darker background for header row */
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #0056b3;
+            color: #ffffff;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #a71d2a;
+            color: #ffffff;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #1e7e34;
+            color: #ffffff;
+        }
+
+        /* Form Control Styles */
+        .form-control {
+            background-color: #2e2e2e;
+            border-color: #444444;
+            color: #ffffff;
+        }
+
+        /* Hover Effect for Table Rows */
+        tbody tr:hover {
+            background-color: #1a1a1a;
+        }
+    </style>
+    <script>
+        function confirmDeletePort(strategy, ticker, port) {
+            if (confirm(`Are you sure you want to delete port '${port}' from ticker '${ticker}' in strategy '${strategy}'?`)) {
+                document.getElementById(`delete-port-form-${strategy}-${ticker}-${port}`).submit();
+            }
+        }
+
+        function confirmDeleteTicker(strategy, ticker) {
+            if (confirm(`Are you sure you want to delete ticker '${ticker}' from strategy '${strategy}'?`)) {
+                document.getElementById(`delete-ticker-form-${strategy}-${ticker}`).submit();
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="text-center">Strategies Management</h2>
+
+    <!-- Add Strategy Form -->
+    <form action="/add_strategy" method="POST" class="form-inline mb-4">
+        <input type="text" class="form-control mr-2" name="strategy_name" placeholder="Strategy Name" required>
+        <button type="submit" class="btn btn-primary">Add Strategy</button>
+    </form>
+
+    <!-- Strategies Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th>Strategy</th>
+                <th>Accounts</th>
+                <th>Tickers</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for strategy_name, strategy_data in config['strategies'].items() %}
+                <tr>
+                    <td>{{ strategy_name }}</td>
+                    <td>
+                        <ul>
+                            {% for account_name in strategy_data['accounts'].keys() %}
+                                <li>{{ account_name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td>
+                        <ul>
+                            {% for ticker_name, ticker_data in strategy_data['tickers'].items() %}
+                                <li>
+                                    {{ ticker_name }}
+                                    <a href="#" class="text-danger ml-2" onclick="confirmDeleteTicker('{{ strategy_name }}', '{{ ticker_name }}')">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                    <!-- Delete Ticker Form -->
+                                    <form id="delete-ticker-form-{{ strategy_name }}-{{ ticker_name }}" action="/delete_ticker/{{ strategy_name }}/{{ ticker_name }}" method="POST" style="display:none;"></form>
+                                    <ul>
+                                        {% for port in ticker_data['ports'] | sort %}
+                                            <li>
+                                                Port: {{ port }}
+                                                <!-- Delete Port Form -->
+                                                <form id="delete-port-form-{{ strategy_name }}-{{ ticker_name }}-{{ port }}" action="/delete_port/{{ strategy_name }}/{{ ticker_name }}/{{ port }}" method="POST" style="display:inline;">
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeletePort('{{ strategy_name }}', '{{ ticker_name }}', '{{ port }}')">
+                                                        <i class="fas fa-times"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <!-- Form to add a port to the ticker -->
+                                    <form action="/add_port/{{ strategy_name }}/{{ ticker_name }}" method="POST" class="form-inline mt-2">
+                                        <input type="text" name="port" class="form-control mr-2" placeholder="Port" required>
+                                        <button type="submit" class="btn btn-success btn-sm">Add Port</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <!-- Form to add a new ticker to the strategy -->
+                        <form action="/add_ticker/{{ strategy_name }}" method="POST" class="form-inline mt-2">
+                            <input type="text" name="ticker_name" class="form-control mr-2" placeholder="Ticker" required>
+                            <button type="submit" class="btn btn-primary btn-sm">Add Ticker</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="/delete_strategy/{{ strategy_name }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete Strategy</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+</div>
+</body>
+</html>
